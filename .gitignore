@@ -1,0 +1,5 @@
+# Ignore any .idea folder anywhere
+**/.idea/
+
+# Ignore any .env file anywhere
+**/.env

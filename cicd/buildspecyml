@@ -1,0 +1,39 @@
+version: 0.2
+
+env:
+  variables:
+    APP_NAME: "cicd-app"
+    AWS_REGION: "ap-southeast-1"
+  compute-type: BUILD_GENERAL1_SMALL
+
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies"
+      - apt-get update -y
+      - apt-get install -y unzip
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+      - REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME
+      - aws ecr create-repository --repository-name $APP_NAME --region $AWS_REGION || true
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+
+  build:
+    commands:
+      - echo "Building application"
+      - make build
+      - echo "Building Docker image..."
+      - docker build -t $REPOSITORY_URI:latest .
+
+  post_build:
+    commands:
+      - echo "Pushing Docker image..."
+      - docker push $REPOSITORY_URI:latest
+      - echo "Build completed"
+
+artifacts:
+  files:
+    - bin/**/*
